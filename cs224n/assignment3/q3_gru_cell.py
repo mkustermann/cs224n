@@ -18,7 +18,7 @@ logger = logging.getLogger("hw3.q3.1")
 logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
-class GRUCell(tf.nn.rnn_cell.RNNCell):
+class GRUCell(tf.contrib.rnn.RNNCell):
     """Wrapper around our GRU cell implementation that allows us to play
     nicely with TensorFlow.
     """
@@ -65,7 +65,30 @@ class GRUCell(tf.nn.rnn_cell.RNNCell):
         # be defined elsewhere!
         with tf.variable_scope(scope):
             ### YOUR CODE HERE (~20-30 lines)
-            pass
+            init = tf.contrib.layers.xavier_initializer()
+
+            # Combine input and state to an z gate (update gate).
+            U_z = tf.get_variable('U_z', shape=(self.input_size, self.state_size), initializer=init)
+            W_z = tf.get_variable('W_z', shape=(self.state_size, self.state_size), initializer=init)
+            b_z = tf.get_variable('b_z', shape=(self.state_size,), initializer=init)
+            z = tf.sigmoid(
+                tf.matmul(inputs, U_z) + tf.matmul(state, W_z) + b_z)
+
+            # Combine input and state to an r gate (reset gate).
+            U_r = tf.get_variable('U_r', shape=(self.input_size, self.state_size), initializer=init)
+            W_r = tf.get_variable('W_r', shape=(self.state_size, self.state_size), initializer=init)
+            b_r = tf.get_variable('b_r', shape=(self.state_size,), initializer=init)
+            r = tf.sigmoid(
+                tf.matmul(inputs, U_r) + tf.matmul(state, W_r) + b_r)
+
+            # Combine input and (reset-gate modified) state to output/new-state.
+            U_o = tf.get_variable('U_o', shape=(self.input_size, self.state_size), initializer=init)
+            W_o = tf.get_variable('W_o', shape=(self.state_size, self.state_size), initializer=init)
+            b_o = tf.get_variable('b_o', shape=(self.state_size,), initializer=init)
+            o = tf.tanh(
+                tf.matmul(inputs, U_o) + tf.matmul(r * state, W_o) + b_o)
+
+            new_state = z * state + (1 - z) * o
             ### END YOUR CODE ###
         # For a GRU, the output and state are the same (N.B. this isn't true
         # for an LSTM, though we aren't using one of those in our
